@@ -133,6 +133,87 @@ abstract class AbstractReloadableSpec extends BaseSpec {
         reloadable.orElseGet({ defaultValue }) == rValue
     }
 
+    def "orElseThrow() should throw NSE on empty reloadable"() {
+        given:
+        def reloadable = emptyReloadable()
+
+        when:
+        def value = reloadable.orElseThrow()
+
+        then:
+        def ex = thrown(NoSuchElementException)
+        log.info("got exception:", ex)
+        ex.getMessage().equalsIgnoreCase("Value is not present.")
+        value == null
+    }
+
+    def "orElseThrow() should return stored value on non-empty reloadable"() {
+        given:
+        def someValue = 'my precious value'
+        def reloadable = createReloadable(someValue)
+
+        when:
+        def value = reloadable.orElseThrow()
+
+        then:
+        noExceptionThrown()
+        value.is(someValue)
+    }
+
+    def "orElseThrow(supplier) should throw NPE in case of null arguments even on full reloadable"() {
+        when:
+        def value = reloadable.orElseThrow(null)
+
+        then:
+        def ex = thrown(NullPointerException)
+        value == null
+
+        where:
+        reloadable << [
+            emptyReloadable(),
+            createReloadable("foo"),
+        ]
+    }
+
+    def "orElseThrow(supplier) should throw custom exception on empty reloadable"() {
+        given:
+        def exception = new IOException('b00m')
+        def reloadable = emptyReloadable()
+
+        when:
+        def value = reloadable.orElseThrow({ exception })
+
+        then:
+        def ex = thrown(Throwable)
+        ex.is(exception)
+        value == null
+    }
+
+    def "orElseThrow(supplier) should throw NPE on empty reloadable if supplier returns null"() {
+        given:
+        def reloadable = emptyReloadable()
+
+        when:
+        def value = reloadable.orElseThrow({ null })
+
+        then:
+        def ex = thrown(NullPointerException)
+        ex.getMessage().contains("exception supplier returned null")
+        value == null
+    }
+
+    def "orElseThrow(supplier) should return stored value on non-empty reloadable"() {
+        given:
+        def someValue = 'my precious value'
+        def reloadable = createReloadable(someValue)
+
+        when:
+        def value = reloadable.orElseThrow({ new IllegalStateException("thou shall not pass") })
+
+        then:
+        noExceptionThrown()
+        value.is(someValue)
+    }
 
     def "non-empty reloadable should contain value"() {
         given:

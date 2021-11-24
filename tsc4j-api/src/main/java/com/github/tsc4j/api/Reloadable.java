@@ -19,6 +19,7 @@ package com.github.tsc4j.api;
 import lombok.NonNull;
 
 import java.io.Closeable;
+import java.util.NoSuchElementException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -82,6 +83,26 @@ public interface Reloadable<T> extends Supplier<T>, Closeable {
      * @return reloadable's stored value if it's present, otherwise result of {@code supplier}.
      */
     T orElseGet(@NonNull Supplier<T> supplier);
+
+    /**
+     * If a value is present, returns the value, otherwise throws {@link NoSuchElementException}
+     *
+     * @return value if present
+     * @throws NoSuchElementException – if no value is present
+     */
+    T orElseThrow();
+
+    /**
+     * If a value is present, returns the value, otherwise throws an exception produced by the exception supplying
+     * function.
+     *
+     * @param <X>               Type of the exception to be thrown
+     * @param exceptionSupplier the supplying function that produces an exception to be thrown
+     * @return the value, if present
+     * @throws X                    if no value is present
+     * @throws NullPointerException if no value is present and the exception supplying function is {@code null}
+     */
+    <X extends Throwable> T orElseThrow(@NonNull Supplier<? extends X> exceptionSupplier) throws X;
 
     /**
      * Invokes specified consumer if value is present.

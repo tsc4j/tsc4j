@@ -26,6 +26,7 @@ import lombok.val;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
@@ -92,11 +93,7 @@ public abstract class AbstractReloadable<T> extends CloseableInstance implements
 
     @Override
     public final T get() {
-        val value = fetchValue();
-        if (value == null) {
-            throw new NoSuchElementException("Value is not present.");
-        }
-        return value;
+        return fetchValueOrThrow(this::valueIsNotPresent);
     }
 
     @Override
@@ -109,6 +106,40 @@ public abstract class AbstractReloadable<T> extends CloseableInstance implements
     public final T orElseGet(@NonNull Supplier<T> supplier) {
         val value = fetchValue();
         return (value == null) ? supplier.get() : value;
+    }
+
+    @Override
+    public final T orElseThrow() {
+        return orElseThrow(this::valueIsNotPresent);
+    }
+
+    @Override
+    public final <X extends Throwable> T orElseThrow(Supplier<? extends X> exceptionSupplier) throws X {
+        return fetchValueOrThrow(exceptionSupplier);
+    }
+
+    private NoSuchElementException valueIsNotPresent() {
+        return new NoSuchElementException("Value is not present.");
+    }
+
+    /**
+     * Fetches current value.
+     *
+     * @param exceptionSupplier supplier of exception that will be thrown if value is not present
+     * @param <X>               exception type
+     * @return value if exists
+     * @throws X when value is not present
+     */
+    private <X extends Throwable> T fetchValueOrThrow(@NonNull Supplier<? extends X> exceptionSupplier) throws X {
+        val value = this.value;
+        if (value == null) {
+            val exception = Objects.requireNonNull(
+                exceptionSupplier.get(),
+                "Error fetching non-existent value and exception supplier returned null!"
+            );
+            throw exception;
+        }
+        return value;
     }
 
     @Override
