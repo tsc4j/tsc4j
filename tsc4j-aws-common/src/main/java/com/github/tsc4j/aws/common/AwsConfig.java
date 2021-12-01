@@ -94,7 +94,6 @@ public final class AwsConfig implements WithConfig {
     @Override
     public void withConfig(@NonNull Config cfg) {
         cfgBoolean(cfg, "anonymous-auth", this::setAnonymousAuth);
-        cfgBoolean(cfg, "anonymous-auth", this::setAnonymousAuth);
         cfgString(cfg, "access-key-id", this::setAccessKeyId);
         cfgString(cfg, "secret-access-key", this::setSecretAccessKey);
         cfgString(cfg, "region", this::setRegion);

@@ -136,4 +136,64 @@ class ParameterStoreConfigSourceSpec extends Specification {
             log.info("created parameter: {} -> {}", name, req)
         }
     }
+
+    def "withConfig() should configure parameters to expected values"() {
+        given:
+        def cfgMap = [
+            // common AWS configuration parameters
+            "access-key-id"       : 'foo',
+            "secret-access-key"   : 'bar',
+            "region"              : 'us-east-5',
+            "endpoint"            : "http://localhost:4567/",
+            "gzip"                : false,
+            "timeout"             : '67s',
+            "max-connections"     : 13,
+            "max-error-retry"     : 7,
+            "s3-path-style-access": true,
+
+            // config source specific configuration parameters
+            "paths"               : ['/foo', '/bar/baz', '/blah'],
+            "at-path"             : "/aws-ssm",
+        ]
+        def config = ConfigFactory.parseMap(cfgMap)
+
+        and:
+        def builder = ParameterStoreConfigSource.builder()
+
+        expect: "default values"
+        with(builder.getAwsConfig()) {
+            getEndpoint() == null
+            getAccessKeyId() == null
+            getSecretAccessKey() == null
+            getRegion() == null
+            getEndpoint() == null
+            isGzip() == true
+            getTimeout().toSeconds() == 10
+            getMaxConnections() == 100
+            getMaxErrorRetry() == 0
+            getS3PathStyleAccess() == null
+        }
+
+        builder.getPaths().isEmpty()
+        builder.getAtPath().isEmpty()
+
+        when:
+        builder.withConfig(config)
+
+        then: "settings should be applied"
+        with(builder.getAwsConfig()) {
+            getEndpoint() == cfgMap.endpoint
+            getAccessKeyId() == cfgMap.'access-key-id'
+            getSecretAccessKey() == cfgMap.'secret-access-key'
+            getRegion() == cfgMap.region
+            isGzip() == cfgMap.gzip
+            getTimeout().toSeconds() == 67
+            getMaxConnections() == 13
+            getMaxErrorRetry() == 7
+            getS3PathStyleAccess() == true
+        }
+
+        builder.getPaths() == cfgMap.paths
+        builder.getAtPath() == cfgMap.'at-path'
+    }
 }

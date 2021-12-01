@@ -17,6 +17,7 @@
 
 package com.github.tsc4j.aws.sdk1
 
+import com.typesafe.config.ConfigFactory
 import groovy.util.logging.Slf4j
 import spock.lang.Ignore
 import spock.lang.Shared
@@ -25,7 +26,6 @@ import spock.lang.Stepwise
 
 @Slf4j
 @Stepwise
-@Ignore
 class ParameterStoreValueProviderSpec extends Specification {
     @Shared
     def paramNames = []
@@ -35,6 +35,7 @@ class ParameterStoreValueProviderSpec extends Specification {
                                               .setRegion("us-west-2")
                                               .build()
 
+    @Ignore
     def "should list all parameters"() {
         when:
         def names = provider.names()
@@ -53,6 +54,7 @@ class ParameterStoreValueProviderSpec extends Specification {
         true
     }
 
+    @Ignore
     def "should work"() {
         when:
 
@@ -65,5 +67,61 @@ class ParameterStoreValueProviderSpec extends Specification {
 
         then:
         true
+    }
+
+    def "withConfig() should configure parameters to expected values"() {
+        given:
+        def cfgMap = [
+            // common AWS configuration parameters
+            "access-key-id"       : 'foo',
+            "secret-access-key"   : 'bar',
+            "region"              : 'us-east-5',
+            "endpoint"            : "http://localhost:4567/",
+            "gzip"                : false,
+            "timeout"             : '67s',
+            "max-connections"     : 13,
+            "max-error-retry"     : 7,
+            "s3-path-style-access": true,
+
+            // value provider specific configuration parameters
+            "decrypt"             : false,
+        ]
+        def config = ConfigFactory.parseMap(cfgMap)
+
+        and:
+        def builder = ParameterStoreValueProvider.builder()
+
+        expect: "default values"
+        with(builder.getAwsConfig()) {
+            getEndpoint() == null
+            getAccessKeyId() == null
+            getSecretAccessKey() == null
+            getRegion() == null
+            getEndpoint() == null
+            isGzip() == true
+            getTimeout().toSeconds() == 10
+            getMaxConnections() == 100
+            getMaxErrorRetry() == 0
+            getS3PathStyleAccess() == null
+        }
+        builder.isDecrypt() == true
+
+        when:
+        builder.withConfig(config)
+
+        then: "settings should be applied"
+        with(builder.getAwsConfig()) {
+            getEndpoint() == cfgMap.endpoint
+            getAccessKeyId() == cfgMap.'access-key-id'
+            getSecretAccessKey() == cfgMap.'secret-access-key'
+            getRegion() == cfgMap.region
+            isGzip() == cfgMap.gzip
+            getTimeout().toSeconds() == 67
+            getMaxConnections() == 13
+            getMaxErrorRetry() == 7
+            getS3PathStyleAccess() == true
+        }
+
+        builder.isDecrypt() == false
     }
 }

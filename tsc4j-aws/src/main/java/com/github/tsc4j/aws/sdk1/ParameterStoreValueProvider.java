@@ -108,6 +108,7 @@ public final class ParameterStoreValueProvider extends AbstractConfigValueProvid
         @Override
         public void withConfig(@NonNull Config config) {
             super.withConfig(config);
+            getAwsConfig().withConfig(config);
             
             cfgBoolean(config, "decrypt", this::setDecrypt);
         }
