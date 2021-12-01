@@ -132,6 +132,7 @@ public final class ParameterStoreConfigSource extends AbstractConfigSource {
         @Override
         public void withConfig(@NonNull Config config) {
             super.withConfig(config);
+            getAwsConfig().withConfig(config);
 
             cfgExtract(config, "paths", Config::getStringList, this::setPaths);
             cfgString(config, "at-path", this::setAtPath);
