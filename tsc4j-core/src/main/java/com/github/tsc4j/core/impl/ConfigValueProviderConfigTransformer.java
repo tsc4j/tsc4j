@@ -68,6 +68,7 @@ public final class ConfigValueProviderConfigTransformer
     ));
 
     private final List<ConfigValueProvider> providers;
+    private boolean tolerateBadConfigReferenceValueSpecs;
 
     private final OnlyOnce<String> onlyOnce = new OnlyOnce<>(
         it -> log.warn("{} can't find registered config value provider: {}", this, it), 1000);
@@ -80,6 +81,7 @@ public final class ConfigValueProviderConfigTransformer
     protected ConfigValueProviderConfigTransformer(@NonNull Builder builder) {
         super(builder);
         this.providers = createProviderList(builder.getConfigValueProviders());
+        this.tolerateBadConfigReferenceValueSpecs = builder.isTolerateBadConfigReferenceValueSpecs();
     }
 
     private <T> List<T> createProviderList(List<T> c) {
@@ -168,7 +170,13 @@ public final class ConfigValueProviderConfigTransformer
     }
 
     private void registerValueProviderFetchTask(@NonNull UpdatableConfigValue uv, @NonNull UpdateContext ctx) {
-        val valueSpec = getValueSpec(uv.variable);
+        val valueSpecOpt = getValueSpec(uv.variable, uv.configPath);
+        if (!valueSpecOpt.isPresent()) {
+            log.debug("{} no config value reference could be found for: '{}'", this, uv.variable);
+            return;
+        }
+
+        val valueSpec = valueSpecOpt.get();
         log.trace("{} found value spec for '{}': {}", this, uv.variable, valueSpec);
 
         // get value provider and register fetch task
@@ -207,17 +215,33 @@ public final class ConfigValueProviderConfigTransformer
             .findFirst();
     }
 
-    private ValueSpec getValueSpec(@NonNull String str) {
+    private Optional<ValueSpec> getValueSpec(@NonNull String str, @NonNull String cfgPath) {
+        try {
+            val valueSpec = tryGetValueSpec(str, cfgPath);
+            return Optional.ofNullable(valueSpec);
+        } catch (Exception e) {
+            if (tolerateBadConfigReferenceValueSpecs) {
+                onlyOnce.add("bad_value_spec_" + cfgPath, it -> {
+                    log.warn("invalid config value reference at config path {}: {}", cfgPath, e.toString());
+                });
+                return Optional.empty();
+            } else {
+                throw e;
+            }
+        }
+    }
+
+    private ValueSpec tryGetValueSpec(@NonNull String str, @NonNull String cfgPath) {
         val sanitized = str.trim();
         return variableFormats.stream()
             .map(it -> it.matcher(sanitized))
             .filter(Matcher::find)
-            .map(this::toValueProviderVariable)
+            .map(it -> toValueProviderVariable(it, cfgPath))
             .findFirst()
-            .orElseThrow(() -> badValueArg(str, "Unknown format."));
+            .orElseThrow(() -> badValueArg(cfgPath, str, "Unknown config value reference format."));
     }
 
-    private ValueSpec toValueProviderVariable(Matcher m) {
+    private ValueSpec toValueProviderVariable(Matcher m, String cfgPath) {
         val type = optString(m.group(1)).orElse("");
         val name = optString(m.group(2)).orElse("");
         val valueName = optString(m.group(3)).orElse("");
@@ -228,21 +252,23 @@ public final class ConfigValueProviderConfigTransformer
         }
 
         if (type.isEmpty()) {
-            throw badValueArg("type", m.group());
+            throw badValueArg(cfgPath, "type", m.group());
         }
 
         if (valueName.isEmpty()) {
-            throw badValueArg("value-name", "can't use variable.");
+            throw badValueArg(cfgPath, "value-name", "can't use variable.");
         }
 
         return new ValueSpec(type, name, valueName);
     }
 
-    private IllegalArgumentException badValueArg(String value, String errDesc) {
-        return new IllegalArgumentException(String.format(
-            "Bad value declaration '%s': %s (valid syntax: <value-provider-type>[:value-provider-name]://<value-specification>)",
-            value, errDesc
-        ));
+    private IllegalArgumentException badValueArg(String cfgPath, String value, String errDesc) {
+        val errMsg = String.format(
+            "Bad config value reference declaration [path=%s] '%s': %s (valid syntax: <value-provider-type>[:value-provider-name]://<value-specification>)",
+            cfgPath, value, errDesc
+        );
+
+        return new IllegalArgumentException(errMsg);
     }
 
     @Override
@@ -497,6 +523,13 @@ public final class ConfigValueProviderConfigTransformer
         @Getter
         @Setter
         private List<ConfigValueProvider> configValueProviders = new ArrayList<>();
+
+        /**
+         * Tolerate bad configuration reference value specifications in config being transformed?
+         */
+        @Getter
+        @Setter
+        private boolean tolerateBadConfigReferenceValueSpecs = false;
 
         /**
          * Adds value providers.
