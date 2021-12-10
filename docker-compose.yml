@@ -1,0 +1,35 @@
+#
+# docker-compose file required for running tests
+#
+
+# simple memory limits are not supported outside swarm mode :-/ srsly?!
+version: "3"
+
+services:
+  ec2-metadata:
+    image:        amazon/amazon-ec2-metadata-mock:v1.9.2
+    mem_limit:    256M
+    ports:
+      - 1338:1338
+
+  localstack:
+    image:        localstack/localstack:0.12.20
+    mem_limit:    768M
+    user:         nobody
+    ports:
+      - 4566:4566
+    environment:
+      - SERVICES=ssm
+      # enable localstack data persistence - enable it only if you really need it
+      #- DATA_DIR=/tmp/localstack/data
+      #- PERSISTENCE_SINGLE_FILE=false
+      - DEBUG=0
+
+    volumes:
+      - /tmp/localstack:/tmp/localstack
+
+    depends_on:
+      - ec2-metadata
+
+# vim:shiftwidth=2 softtabstop=2 expandtab
+# EOF

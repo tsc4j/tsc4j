@@ -1,0 +1,91 @@
+/*
+ * Copyright 2017 - 2021 tsc4j project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.github.tsc4j.aws.sdk2
+
+import com.github.tsc4j.core.Tsc4jException
+import software.amazon.awssdk.services.ssm.SsmClient
+import software.amazon.awssdk.services.ssm.model.ParameterType
+import spock.lang.AutoCleanup
+import spock.lang.Shared
+import spock.lang.Specification
+import spock.lang.Unroll
+
+@Unroll
+class SsmFacadeSpec extends Specification {
+    static def ssmParameters = [
+        "/skd2/facade/a/x"  : [ParameterType.STRING, "a.x"],
+        "/skd2/facade/a/y"  : [ParameterType.STRING_LIST, "a.y,a,b,c", ["a.y", "a", "b", "c"]],
+        "/skd2/facade/a/z"  : [ParameterType.SECURE_STRING, "a.z"],
+        "/skd2/facade/b/c/d": [ParameterType.STRING, "42"]
+    ]
+
+    static def exception = new RuntimeException("bang!")
+
+    @Shared
+    @AutoCleanup
+    def ssm = AwsTestEnv.setupSSM(AwsTestEnv.ssmClient(), ssmParameters)
+
+    SsmFacade createFacade(SsmClient ssm) {
+        new SsmFacade("", ssm, true, false)
+    }
+
+    def "should correctly fetch parameters by path"() {
+        given:
+        def facade = createFacade(ssm)
+
+        when:
+        def params = facade.fetchByPath(path).collect { it.value() }
+
+        then:
+        params == expected
+
+        where:
+        path            | expected
+        '/non-existent' | []
+        '/skd2/facade/a'   | ['a.x', 'a.y,a,b,c', 'a.z']
+        'a'   | []
+        '/skd2/facade/b'   | ['42']
+        'b'   | []
+        '/skd2/facade/b/c' | ['42']
+        'b/c' | []
+        '/b/c/d'        | []
+        '/b/c/d/'       | []
+    }
+
+    def "should throw tsc4j exception in case of errors"() {
+        given:
+        def ssm = Mock(SsmClient)
+        def facade = new SsmFacade("", ssm, true, false)
+
+        when: "execute action on a facade"
+        def result = action.call(facade)
+
+        then:
+        ssm._ >> { throw exception }
+
+        def thrown = thrown(Exception)
+        thrown instanceof Tsc4jException
+        thrown.getCause().is(exception)
+
+        result == null
+
+        where:
+        action << [
+            { SsmFacade it -> it.list() }
+        ]
+    }
+}

@@ -1,0 +1,37 @@
+//
+// build.gradle
+//
+
+dependencies {
+  api                     project(":${rootProject.name}-core")
+  api                     project(":${rootProject.name}-aws-common")
+
+  api                     "software.amazon.awssdk:s3"
+  api                     "software.amazon.awssdk:ssm"
+
+  compileOnly             "software.amazon.awssdk:apache-client"
+  compileOnly             "software.amazon.awssdk:netty-nio-client"
+
+  compileOnly             project(":${rootProject.name}-cli")
+  annotationProcessor     "info.picocli:picocli-codegen"
+
+  // abstract tests from core subproject
+  testImplementation      project(path: ":${rootProject.name}-core", configuration: "testOutput")
+
+  // aws sdk1 implementation
+  testImplementation      project(":${rootProject.name}-aws")
+
+  testImplementation      "io.findify:s3mock_2.12:0.2.5"
+  testImplementation      "org.apache.httpcomponents:httpclient:4.5.13"
+}
+
+compileJava {
+  // for picocli-codegen
+  options.compilerArgs += ["-Aproject=${project.group}/${project.name}"]
+}
+
+description = "Amazon Web Services (AWS) integration via aws-java-sdk 2.x"
+publishing.publications.mavenJava.pom.description = rootProject.name + ' :: ' + description
+
+// vim:shiftwidth=2 softtabstop=2 expandtab
+// EOF

@@ -1,0 +1,4 @@
+com.github.tsc4j.aws.sdk2.S3ConfigSourceLoader
+com.github.tsc4j.aws.sdk2.ParameterStoreConfigSourceLoader
+com.github.tsc4j.aws.sdk2.EC2MetadataConfigSourceLoader
+com.github.tsc4j.aws.sdk2.ParameterStoreValueProviderLoader
