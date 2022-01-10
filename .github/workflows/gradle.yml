@@ -31,23 +31,16 @@ jobs:
     services:
       # AWS EC2 metadata mock
       ec2-metadata:
-        image: bpholt/fake-ec2-metadata-service
-        env:
-          BIND_ADDR: 0.0.0.0
+        image: amazon/amazon-ec2-metadata-mock:v1.9.2
         ports:
-          - 9090:80
+          - 1338:1338
       # AWS localstack services
       localstack:
-        image: localstack/localstack:0.12.5
+        image: localstack/localstack:0.12.20
         env:
-          SERVICES: ssm,s3
-          DATA_DIR: /tmp/localstack/data
-          FORCE_NONINTERACTIVE: "true"
-          # USE_SSL: true
+          SERVICES: ssm
         ports:
-          - 4655:4655
-        volumes:
-          - /tmp/localstack:/tmp/localstack
+          - 4566:4566
 
     steps:
       - uses: actions/checkout@v2
