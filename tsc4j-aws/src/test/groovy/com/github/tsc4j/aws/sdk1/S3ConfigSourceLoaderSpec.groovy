@@ -17,8 +17,10 @@
 
 package com.github.tsc4j.aws.sdk1
 
+import com.github.tsc4j.core.Tsc4jImplUtils
 import com.github.tsc4j.core.Tsc4jLoader
 import com.github.tsc4j.core.impl.Tsc4jLoaderTestBaseSpec
+import com.typesafe.config.ConfigFactory
 
 class S3ConfigSourceLoaderSpec extends Tsc4jLoaderTestBaseSpec {
     @Override
@@ -34,5 +36,29 @@ class S3ConfigSourceLoaderSpec extends Tsc4jLoaderTestBaseSpec {
     @Override
     Class builderClass() {
         return S3ConfigSource.Builder
+    }
+
+    def "config source should be loaded by type name and aliases"() {
+        given:
+        def loader = loader()
+        def names = [loader.name()] + loader.aliases()
+
+        when:
+        def csOpts = names.collect {
+            def config = ConfigFactory.parseMap([
+                impl : it,
+                paths: ['s3://foo/bar']
+            ])
+            log.info("creating config source impl: $it")
+            Tsc4jImplUtils.createConfigSource(config, 1)
+        }
+
+        then:
+        csOpts.size() == names.size()
+        csOpts.each { assert it.isPresent() }
+        csOpts.each { assert it.get() instanceof S3ConfigSource }
+
+        cleanup:
+        csOpts?.collect { it.ifPresent({ it.close() }) }
     }
 }

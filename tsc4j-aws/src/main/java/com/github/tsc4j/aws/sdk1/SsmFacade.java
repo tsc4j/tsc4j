@@ -31,6 +31,7 @@ import com.github.tsc4j.aws.common.AwsConfig;
 import com.github.tsc4j.core.BaseInstance;
 import com.github.tsc4j.core.Tsc4jException;
 import com.github.tsc4j.core.Tsc4jImplUtils;
+import com.github.tsc4j.core.utils.CollectionUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValue;
@@ -46,7 +47,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -81,37 +84,52 @@ final class SsmFacade extends BaseInstance implements Closeable {
      */
     static final String TYPE = "aws.ssm";
 
+    /**
+     * Type aliases
+     */
+    static final Set<String> TYPE_ALIASES = CollectionUtils.toImmutableSet(
+        "aws1.ssm", "aws.param.store", "aws1.param.store", "ssm", "ssm1");
+
     private static final Pattern SPLIT_PATTERN = Pattern.compile("\\s*,\\s*");
 
     private final AWSSimpleSystemsManagement ssm;
-    private final String id;
     private final boolean decrypt;
     private final boolean parallel;
 
     /**
-     * Creates new instance.
+     * Creates new anonymous instance.
      *
-     * @param id       instance id
      * @param awsInfo  aws info
      * @param decrypt  decrypt secure parameters?
      * @param parallel parallel parameter fetching?
      */
-    SsmFacade(@NonNull String id, @NonNull AwsConfig awsInfo, boolean decrypt, boolean parallel) {
-        this(createSsmClient(awsInfo), id, decrypt, parallel);
+    SsmFacade(@NonNull AwsConfig awsInfo, boolean decrypt, boolean parallel) {
+        this("", awsInfo, decrypt, parallel);
     }
 
     /**
      * Creates new instance.
      *
-     * @param ssm      ssm client
-     * @param id       instance id
+     * @param name     instance name
+     * @param awsInfo  aws info
      * @param decrypt  decrypt secure parameters?
      * @param parallel parallel parameter fetching?
      */
-    SsmFacade(@NonNull AWSSimpleSystemsManagement ssm, @NonNull String id, boolean decrypt, boolean parallel) {
-        super(id);
+    SsmFacade(String name, @NonNull AwsConfig awsInfo, boolean decrypt, boolean parallel) {
+        this(name, createSsmClient(awsInfo), decrypt, parallel);
+    }
+
+    /**
+     * Creates new instance.
+     *
+     * @param name     instance name
+     * @param ssm      ssm client
+     * @param decrypt  decrypt secure parameters?
+     * @param parallel parallel parameter fetching?
+     */
+    SsmFacade(String name, @NonNull AWSSimpleSystemsManagement ssm, boolean decrypt, boolean parallel) {
+        super(name);
         this.ssm = ssm;
-        this.id = id;
         this.decrypt = decrypt;
         this.parallel = parallel;
     }
@@ -294,6 +312,8 @@ final class SsmFacade extends BaseInstance implements Closeable {
      * @return list of fetched parameters
      */
     List<Parameter> fetch(@NonNull List<String> names) {
+        log.debug("{} fetching parameters: {}", this, names);
+
         val requests = Tsc4jImplUtils.partitionList(names, MAX_RESULTS).stream()
             .map(e -> toGetParametersRequest(e, decrypt))
             .collect(Collectors.toList());
@@ -353,6 +373,30 @@ final class SsmFacade extends BaseInstance implements Closeable {
             .withWithDecryption(decrypt);
     }
 
+    /**
+     * Returns true AWS SSM parameter name.
+     *
+     * @param name parameter name
+     * @return validated aws ssm parameter name
+     * @see #ssmParamNameMap(Collection)
+     */
+    static String ssmParamName(@NonNull String name) {
+        return (name.startsWith("/")) ? name : "/" + name;
+    }
+
+    /**
+     * Creates map of AWS SSM parameter name => parameter name.
+     *
+     * @param names parameter names
+     * @return map
+     * @see #ssmParamName(String)
+     */
+    static Map<String, String> ssmParamNameMap(@NonNull Collection<String> names) {
+        val res = CollectionUtils.<String, String>newMap();
+        names.forEach(it -> res.put(ssmParamName(it), it));
+        return res;
+    }
+
     @Override
     protected void doClose() {
         super.doClose();
@@ -362,11 +406,6 @@ final class SsmFacade extends BaseInstance implements Closeable {
 
     @Override
     public String getType() {
-        return id;
-    }
-
-    @Override
-    public String toString() {
-        return id;
+        return TYPE;
     }
 }

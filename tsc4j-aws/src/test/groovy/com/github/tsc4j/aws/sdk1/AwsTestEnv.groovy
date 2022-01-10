@@ -24,9 +24,9 @@ import com.amazonaws.services.s3.transfer.TransferManager
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClient
 import com.amazonaws.services.simplesystemsmanagement.model.DeleteParametersRequest
-import com.amazonaws.services.simplesystemsmanagement.model.ParameterType
 import com.amazonaws.services.simplesystemsmanagement.model.PutParameterRequest
 import com.github.tsc4j.core.Tsc4jImplUtils
+import com.github.tsc4j.core.impl.Stopwatch
 import groovy.util.logging.Slf4j
 
 @Slf4j
@@ -34,12 +34,16 @@ class AwsTestEnv {
     static def awsRegion = "us-east-1"
     static def awsEndpoint = "http://localhost:4566"
 
+    // example SSM parameter map
+    // parameter path => [ aws parameter type, parameter raw value, optional expected parameter value ]
+    /*
     static def ssmParameters = [
         "/a/x"  : [ParameterType.String, "a.x"],
         "/a/y"  : [ParameterType.StringList, "a.y,a,b,c", ["a.y", "a", "b", "c"]],
         "/a/z"  : [ParameterType.SecureString, "a.z"],
         "/b/c/d": [ParameterType.String, "42"]
     ]
+     */
 
     private static AWSSimpleSystemsManagementClient ssm
     private static AmazonS3 s3
@@ -55,14 +59,13 @@ class AwsTestEnv {
         ssm
     }
 
-    static AWSSimpleSystemsManagementClient setupSSM() {
-        def ssm = ssmClient()
+    static AWSSimpleSystemsManagementClient setupSSM(AWSSimpleSystemsManagementClient ssm, Map parameters) {
         cleanupSSM(ssm)
-        createSSMParams(ssm)
+        createSSMParams(ssm, parameters)
     }
 
-    static AWSSimpleSystemsManagementClient createSSMParams(AWSSimpleSystemsManagementClient ssm) {
-        ssmParameters.each {
+    static AWSSimpleSystemsManagementClient createSSMParams(AWSSimpleSystemsManagementClient ssm, Map parameters) {
+        parameters.each {
             def name = it.key
             def e = it.value
             def req = new PutParameterRequest()
@@ -78,16 +81,21 @@ class AwsTestEnv {
     }
 
     static AWSSimpleSystemsManagementClient cleanupSSM(AWSSimpleSystemsManagementClient ssm) {
-        def facade = new SsmFacade(ssm, "foo", true, false)
+        def sw = new Stopwatch()
+        def facade = new SsmFacade("", ssm, true, false)
         def names = facade.list().collect { it.getName() }
 
+        def numDeleted = 0
         Tsc4jImplUtils.partitionList(names, 10).collect {
             def req = new DeleteParametersRequest().withNames(it)
             ssm.deleteParameters(req)
-            log.info("deleted {} parameters: {}", it.size(), it)
+            numDeleted += it.size()
+            log.info("deleted AWS SSM {} parameters: {}", it.size(), it)
         }
+        log.info("deleted {} AWS SSM parameters in {}", numDeleted, sw)
         ssm
     }
+
 
     static AmazonS3 s3Client() {
         if (s3 == null) {

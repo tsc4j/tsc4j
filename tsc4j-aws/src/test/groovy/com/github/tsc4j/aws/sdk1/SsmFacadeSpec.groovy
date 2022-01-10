@@ -18,24 +18,30 @@
 package com.github.tsc4j.aws.sdk1
 
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement
+import com.amazonaws.services.simplesystemsmanagement.model.ParameterType
 import com.github.tsc4j.core.Tsc4jException
 import spock.lang.AutoCleanup
-import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
 
 @Unroll
-@IgnoreIf({ env['CI'] })
 class SsmFacadeSpec extends Specification {
+    static def ssmParameters = [
+        "/skd1/facade/a/x"  : [ParameterType.String, "a.x"],
+        "/skd1/facade/a/y"  : [ParameterType.StringList, "a.y,a,b,c", ["a.y", "a", "b", "c"]],
+        "/skd1/facade/a/z"  : [ParameterType.SecureString, "a.z"],
+        "/skd1/facade/b/c/d": [ParameterType.String, "42"]
+    ]
+
     static def exception = new RuntimeException("bang!")
 
     @Shared
     @AutoCleanup("shutdown")
-    def ssm = AwsTestEnv.setupSSM()
+    def ssm = AwsTestEnv.setupSSM(AwsTestEnv.ssmClient(), ssmParameters)
 
     SsmFacade createFacade(AWSSimpleSystemsManagement ssm) {
-        new SsmFacade(ssm, "foo.bar", true, false)
+        new SsmFacade("", ssm, true, false)
     }
 
     def "should correctly fetch parameters by path"() {
@@ -49,19 +55,19 @@ class SsmFacadeSpec extends Specification {
         params == expected
 
         where:
-        path            | expected
-        '/non-existent' | []
-        '/a'            | ['a.x', 'a.y,a,b,c', 'a.z']
-        '/b'            | ['42']
-        '/b/c'          | ['42']
-        '/b/c/d'        | []
-        '/b/c/d/'       | []
+        path               | expected
+        '/non-existent'    | []
+        '/skd1/facade/a'   | ['a.x', 'a.y,a,b,c', 'a.z']
+        '/skd1/facade/b'   | ['42']
+        '/skd1/facade/b/c' | ['42']
+        '/b/c/d'           | []
+        '/b/c/d/'          | []
     }
 
     def "should throw tsc4j exception in case of errors"() {
         given:
         def ssm = Mock(AWSSimpleSystemsManagement)
-        def facade = new SsmFacade(ssm, "foo.bar", true, false)
+        def facade = new SsmFacade("", ssm, true, false)
 
         when: "execute action on a facade"
         def result = action.call(facade)

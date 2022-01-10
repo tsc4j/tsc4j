@@ -72,6 +72,11 @@ public final class CredstashConfigValueProvider extends AbstractConfigValueProvi
         this(builder, createCredstash(builder));
     }
 
+    @Override
+    public String toString() {
+        return super.toString();
+    }
+
     /**
      * Creates new instance.
      *
@@ -79,7 +84,7 @@ public final class CredstashConfigValueProvider extends AbstractConfigValueProvi
      * @param credstash credstash instance
      */
     protected CredstashConfigValueProvider(@NonNull Builder builder, @NonNull JCredStash credstash) {
-        super(builder.getName(), builder.isAllowMissing(), builder.isParallel());
+        super(builder.getName(), TYPE, Collections.emptySet(), builder.isAllowMissing(), builder.isParallel());
         this.credstash = credstash;
         this.tableName = builder.getTableName();
         this.encryptionContext = Collections.unmodifiableMap(new LinkedHashMap<>(builder.getEncryptionContext()));
@@ -122,6 +127,11 @@ public final class CredstashConfigValueProvider extends AbstractConfigValueProvi
      */
     public static Builder builder() {
         return new Builder();
+    }
+
+    @Override
+    public String getType() {
+        return TYPE;
     }
 
     @Override
@@ -241,11 +251,6 @@ public final class CredstashConfigValueProvider extends AbstractConfigValueProvi
     private boolean isNotFoundException(@NonNull RuntimeException e) {
         val msg = e.getMessage();
         return msg.startsWith("Secret ") && msg.endsWith(" could not be found");
-    }
-
-    @Override
-    public String getType() {
-        return TYPE;
     }
 
     /**

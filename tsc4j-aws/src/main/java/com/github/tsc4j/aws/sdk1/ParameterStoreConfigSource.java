@@ -52,7 +52,7 @@ public final class ParameterStoreConfigSource extends AbstractConfigSource {
      */
     protected ParameterStoreConfigSource(@NonNull Builder builder) {
         super(builder);
-        this.ssm = new SsmFacade(this.toString(), builder.getAwsConfig(), true, builder.isParallel());
+        this.ssm = new SsmFacade(builder.getName(), builder.getAwsConfig(), true, builder.isParallel());
         this.paths = Tsc4jImplUtils.toUniqueList(builder.getPaths());
         this.atPath = builder.getAtPath();
     }
