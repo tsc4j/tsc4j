@@ -37,6 +37,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.ServiceLoader;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -116,7 +117,8 @@ public class Tsc4jCli implements Callable<Integer> {
             .build();
 
         try {
-            cli.run(args);
+            val exitCode = cli.run(args);
+            cli.exit(exitCode);
         } catch (PicocliException e) {
             cli.die("Error parsing command line: ", e.getMessage());
         }
@@ -184,9 +186,11 @@ public class Tsc4jCli implements Callable<Integer> {
      * @see CliCommand
      */
     private CommandLine discoverSubCommands(CommandLine cmdLine) {
+        val seenCommandNames = new HashSet<String>();
         Tsc4jImplUtils.loadImplementations(CliCommand.class)
             .stream()
             .sorted()
+            .filter(it -> seenCommandNames.add(it.getName())) // make sure that this command name has not been seen before
             .forEach(cmd -> {
                 log.debug("adding sub-command: {}", cmd.getName());
                 cmdLine.addSubcommand(cmd.getName(), cmd);

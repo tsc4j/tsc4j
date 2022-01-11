@@ -154,7 +154,7 @@ public final class TestCommand extends ConfigQueryCommand {
          * @return true/false
          */
         boolean success() {
-            return config != null;
+            return error == null && config != null;
         }
     }
 }
