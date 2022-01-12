@@ -17,13 +17,16 @@
 
 package com.github.tsc4j.core.impl
 
+import com.github.tsc4j.core.AbstractConfigValueProvider
 import com.github.tsc4j.core.ConfigTransformer
 import com.github.tsc4j.core.ConfigValueProvider
 import com.github.tsc4j.core.Tsc4j
 import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 import com.typesafe.config.ConfigValueType
 import groovy.util.logging.Slf4j
+import lombok.NonNull
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -40,44 +43,22 @@ class ConfigValueProviderConfigTransformerSpec extends Specification {
     '''
 
     // ConfigValue value provider mocks
-    def cfgValueProviderA = Mock(ConfigValueProvider)
-    def cfgValueProviderB = Mock(ConfigValueProvider)
-    def cfgValueProviderC = Mock(ConfigValueProvider)
-    def cfgValueProviderD = Mock(ConfigValueProvider)
+    def cfgValueProviderA = new MockConfigValueProvider(type: 'foo', allowMissing: true)
+    def cfgValueProviderB = new MockConfigValueProvider(name: 'some-name-b', type: 'foo', allowMissing: false)
+    def cfgValueProviderC = new MockConfigValueProvider(type: 'bar', allowMissing: true)
+    def cfgValueProviderD = new MockConfigValueProvider(type: 'some-type', allowMissing: true)
 
     // config transformer
-    ConfigTransformer transformer
+    ConfigTransformer transformer = ConfigValueProviderConfigTransformer
+        .builder()
+        .withProviders([cfgValueProviderA, cfgValueProviderB, cfgValueProviderC, cfgValueProviderD])
+        .build()
 
     def setup() {
-        with(cfgValueProviderA) {
-            getName() >> ''
-            getType() >> 'foo'
-            allowMissing() >> true
-        }
-
-        with(cfgValueProviderB) {
-            getName() >> 'some-name-b'
-            getType() >> 'foo'
-            allowMissing() >> false
-        }
-
-        with(cfgValueProviderC) {
-            getName() >> ''
-            getType() >> 'bar'
-            allowMissing() >> true
-        }
-
-        with(cfgValueProviderD) {
-            getName() >> ''
-            getType() >> 'some-type'
-            allowMissing() >> true
-        }
-
-        // create transformer
-        def cfgValueProviders = [cfgValueProviderA, cfgValueProviderB, cfgValueProviderC, cfgValueProviderD]
-        transformer = ConfigValueProviderConfigTransformer.builder()
-                                                          .withProviders(cfgValueProviders)
-                                                          .build()
+        cfgValueProviderA.reset()
+        cfgValueProviderB.reset()
+        cfgValueProviderC.reset()
+        cfgValueProviderD.reset()
     }
 
     def cleanup() {
@@ -137,9 +118,9 @@ class ConfigValueProviderConfigTransformerSpec extends Specification {
 
     def "should throw if there is config value transformer missing in a magic value"() {
         given:
-        def providerA = Mock(ConfigValueProvider)
-        def providerB = Mock(ConfigValueProvider)
-        def providerC = Mock(ConfigValueProvider)
+        def providerA = new MockConfigValueProvider(type: 'typeA')
+        def providerB = new MockConfigValueProvider(type: 'typeB')
+        def providerC = new MockConfigValueProvider(name: providerName, type: providerType)
 
         and:
         def transformer = ConfigValueProviderConfigTransformer.builder()
@@ -158,12 +139,6 @@ class ConfigValueProviderConfigTransformerSpec extends Specification {
         def result = transformer.transform(config)
 
         then:
-        providerA.getType() >> 'typeA'
-        providerB.getType() >> 'typeB'
-
-        providerC.getType() >> providerType
-        providerC.getName() >> providerName
-
         def ex = thrown(IllegalStateException)
         ex.getMessage().contains('typeC')
         result == null
@@ -236,12 +211,11 @@ class ConfigValueProviderConfigTransformerSpec extends Specification {
         }
 
         when:
+        cfgValueProviderD.values = [(valueProviderValueName): newConfigValue]
         def config = transformer.transform(origConfig)
         log.info("transformed config:\n{}", Tsc4j.render(config, true))
 
         then:
-        cfgValueProviderD.get({ it.contains(valueProviderValueName) }) >> [(valueProviderValueName): newConfigValue]
-
         config != origConfig
         config.getBoolean(cfgPath) == newRawValue.toString().toLowerCase().toBoolean()
 
@@ -271,12 +245,12 @@ class ConfigValueProviderConfigTransformerSpec extends Specification {
         }
 
         when:
+        cfgValueProviderD.values = [(valueProviderValueName): newConfigValue]
+
         def config = transformer.transform(origConfig)
         log.info("transformed config:\n{}", Tsc4j.render(config, true))
 
         then:
-        cfgValueProviderD.get({ it.contains(valueProviderValueName) }) >> [(valueProviderValueName): newConfigValue]
-
         config != origConfig
         config.getLong(cfgPath) == newRawValue.toString().toLowerCase().toLong()
 
@@ -323,12 +297,12 @@ class ConfigValueProviderConfigTransformerSpec extends Specification {
         }
 
         when:
+        cfgValueProviderD.values = ['foo/bar': newConfigValue]
+
         def config = transformer.transform(origConfig)
         log.info("transformed config:\n{}", Tsc4j.render(config, true))
 
         then:
-        cfgValueProviderD.get({ log.info("ran by: $it, $it[0]"); true }) >> ['foo/bar': newConfigValue]
-
         config != origConfig
         with(config) {
             root().size() == 1
@@ -357,17 +331,23 @@ class ConfigValueProviderConfigTransformerSpec extends Specification {
         def cfgStr = configTemplate.replaceAll('%s', str)
         def config = ConfigFactory.parseString(cfgStr).resolve()
 
+        cfgValueProviderA.values = [(valName): ConfigValueFactory.fromAnyRef(expected)]
+
         when:
         log.info("transforming config: {}", Tsc4j.render(config, true))
         def result = transformer.transform(config)
         log.info("transformed config: {}", Tsc4j.render(result, true))
 
         then:
-        1 * cfgValueProviderA.get(_) >> [(valName): ConfigValueFactory.fromAnyRef(expected)]
-        cfgValueProviderB.get(_) >> [:]
-        cfgValueProviderC.get(_) >> [:]
+        !result.isEmpty()
+        result != config
 
-        !config.isEmpty()
+        with(result) {
+            getString('foo') == 'bar'
+            getString('a.scalar') == expected
+            getString('b.obj') == expected
+            getStringList('a.list') == [expected]
+        }
 
         where:
         str            | valName | expected
@@ -396,12 +376,13 @@ class ConfigValueProviderConfigTransformerSpec extends Specification {
         }
 
         when:
+
+        cfgValueProviderD.values = ['foo/bar': newConfigValue]
+
         def config = transformer.transform(origConfig)
         log.info("transformed config:\n{}", Tsc4j.render(config, true))
 
         then:
-        cfgValueProviderD.get({ log.info("ran by: $it, $it[0]"); true }) >> ['foo/bar': newConfigValue]
-
         config != origConfig
         with(config) {
             root().size() == 1
@@ -436,11 +417,12 @@ class ConfigValueProviderConfigTransformerSpec extends Specification {
         }
 
         when:
+        cfgValueProviderD.values = ['foo/bar': newConfigValue]
+
         def config = transformer.transform(origConfig)
         log.info("transformed config:\n{}", Tsc4j.render(config, true))
 
         then:
-        cfgValueProviderD.get({ log.info("ran by: $it, $it[0]"); true }) >> ['foo/bar': newConfigValue]
 
         config != origConfig
         with(config) {
@@ -497,15 +479,15 @@ class ConfigValueProviderConfigTransformerSpec extends Specification {
         }
 
         when:
+        cfgValueProviderA.values = [(varA): newConfigValueA]
+        cfgValueProviderB.values = [(varB): newConfigValueB]
+        cfgValueProviderC.values = [(varC): newConfigValueC]
+
         log.info("transforming config: {}", Tsc4j.render(origConfig, true))
         def config = transformer.transform(origConfig)
         log.info("transformed config:\n{}", Tsc4j.render(config, true))
 
         then:
-        1 * cfgValueProviderA.get({ it.contains(varA) }) >> [(varA): newConfigValueA]
-        1 * cfgValueProviderB.get({ it.contains(varB) }) >> [(varB): newConfigValueB]
-        1 * cfgValueProviderC.get({ it.contains(varC) }) >> [(varC): newConfigValueC]
-
         config != origConfig
         with(config) {
             root().size() == 1
@@ -522,5 +504,36 @@ class ConfigValueProviderConfigTransformerSpec extends Specification {
         'True '   | '我心永恆'    | ['a', 'b']
         // some provider returns an object
         'True '   | '我心永恆'    | ['a': 'b']
+    }
+
+    // mock config value provider, can be configured what to return
+    static class MockConfigValueProvider extends AbstractConfigValueProvider {
+        Map<String, ConfigValue> values = [:]
+
+        MockConfigValueProvider(Map args) {
+            super(
+                args.name ?: '',
+                args.type ?: 'unknown-type',
+                args.aliases ?: [],
+                args.allowMissing ?: false,
+                false
+            )
+        }
+
+        MockConfigValueProvider reset() {
+            values = [:]
+            this
+        }
+
+        @Override
+        protected Map<String, ConfigValue> doGet(@NonNull List<String> names) {
+            def res = [:]
+            names.each {
+                if (values.containsKey(it)) {
+                    res.put(it, values.get(it))
+                }
+            }
+            res
+        }
     }
 }

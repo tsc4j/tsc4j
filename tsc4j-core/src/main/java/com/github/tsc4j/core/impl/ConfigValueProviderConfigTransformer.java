@@ -53,6 +53,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.github.tsc4j.core.Tsc4jImplUtils.optString;
+import static com.github.tsc4j.core.Tsc4jImplUtils.validString;
 
 /**
  * {@link ConfigTransformer} implementation that wraps collection of {@link ConfigValueProvider} instances and replaces
@@ -68,7 +69,7 @@ public final class ConfigValueProviderConfigTransformer
     ));
 
     private final List<ConfigValueProvider> providers;
-    private boolean tolerateBadConfigReferenceValueSpecs;
+    private final boolean tolerateBadConfigReferenceValueSpecs;
 
     private final OnlyOnce<String> onlyOnce = new OnlyOnce<>(
         it -> log.warn("{} can't find registered config value provider: {}", this, it), 1000);
@@ -172,7 +173,8 @@ public final class ConfigValueProviderConfigTransformer
     private void registerValueProviderFetchTask(@NonNull UpdatableConfigValue uv, @NonNull UpdateContext ctx) {
         val valueSpecOpt = getValueSpec(uv.variable, uv.configPath);
         if (!valueSpecOpt.isPresent()) {
-            log.debug("{} no config value reference could be found for: '{}'", this, uv.variable);
+            log.debug("{} no config value reference could be found for: '{}' (path: {}, origin: {})",
+                this, uv.variable, uv.configPath, uv.origConfigValue.origin().description());
             return;
         }
 
@@ -187,11 +189,20 @@ public final class ConfigValueProviderConfigTransformer
                 return it;
             })
             .orElseGet(() -> {
-                val desc = "'" + valueSpec.valueProviderType + ":" + valueSpec.valueProviderName + "'";
+                val type = valueSpec.valueProviderType;
+                val name = valueSpec.valueProviderType;
+                val cfgPath = uv.configPath;
+                val origin = validString(uv.origConfigValue.origin().description());
+
+                val desc = "type='" + valueSpec.valueProviderType + "', name='" + valueSpec.valueProviderName + "'";
                 if (allowErrors()) {
-                    onlyOnce.add(desc);
+                    onlyOnce.add("type='" + type + "', name='" + name + "'");
                 } else {
-                    throw new IllegalStateException("Cannot find config value provider: " + desc);
+                    val msg = String.format(
+                        "Undefined config value provider type: '%s', name: '%s' (config path: '%s', origin: '%s')",
+                        valueSpec.valueProviderType, valueSpec.valueProviderName,
+                        cfgPath, origin);
+                    throw new IllegalStateException(msg);
                 }
 
                 // no other way to better handle absent cases.
@@ -210,7 +221,7 @@ public final class ConfigValueProviderConfigTransformer
     private Optional<ConfigValueProvider> getValueProvider(@NonNull String type, @NonNull String name) {
         val anyNameIsOkay = name.isEmpty();
         return providers.stream()
-            .filter(e -> e.getType().equals(type))
+            .filter(it -> it.supportsConfigValueReferenceType(type))
             .filter(e -> anyNameIsOkay || e.getName().equals(name))
             .findFirst();
     }

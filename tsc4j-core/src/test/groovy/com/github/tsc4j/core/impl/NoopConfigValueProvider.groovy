@@ -25,7 +25,7 @@ import lombok.NonNull
 
 final class NoopConfigValueProvider extends AbstractConfigValueProvider {
     NoopConfigValueProvider() {
-        super("noop", true, false)
+        super("noop", "noop", [], true, false)
     }
 
     static Builder builder() {
