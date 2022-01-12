@@ -1442,8 +1442,10 @@ public class Tsc4jImplUtils {
     }
 
     public <T> Optional<Tsc4jLoader<T>> getLoader(@NonNull Class<T> clazz, @NonNull String impl) {
-        return getAvailableImplementations(clazz).stream()
+        return getAvailableImplementations(clazz)
+            .stream()
             .filter(loader -> loader.supports(impl))
+            .sorted() // make sure that order is observed
             .findFirst();
     }
 

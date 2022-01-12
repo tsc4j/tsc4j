@@ -36,9 +36,9 @@ import java.util.stream.Collectors;
 @EqualsAndHashCode
 public abstract class AbstractTsc4jLoader<T> implements Tsc4jLoader<T> {
     private static final Comparator<Tsc4jLoader> COMPARATOR =
-        Comparator.comparing((Tsc4jLoader e) -> e.forClass().getName())
+        Comparator.comparing((Tsc4jLoader e) -> e.getPriority())
             .thenComparing(Tsc4jLoader::name)
-            .thenComparing(Tsc4jLoader::getPriority);
+            .thenComparing(it -> it.getClass().getName());
 
     private final String name;
     private final Set<String> aliases;
