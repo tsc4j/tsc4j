@@ -25,6 +25,7 @@ public final class ParameterStoreValueProviderLoader extends AbstractTsc4jLoader
     public ParameterStoreValueProviderLoader() {
         super(ParameterStoreValueProvider.class, ParameterStoreValueProvider::builder,
             SsmFacade.TYPE,
-            "AWS SDK 1.x SSM Parameter Store value provider", "aws.param.store", "ssm");
+            "AWS SDK 1.x SSM Parameter Store value provider",
+            SsmFacade.TYPE_ALIASES);
     }
 }

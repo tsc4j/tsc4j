@@ -40,6 +40,11 @@ public final class AwsConfig implements WithConfig {
     private boolean anonymousAuth = false;
 
     /**
+     * Credentials provider type.
+     */
+    private CredentialsProviderType credentialsProvider = CredentialsProviderType.undefined;
+
+    /**
      * <p>AWS access key ({@code aws_access_key_id})</p>
      * <p>NOTE:both {@link #getAccessKeyId()} and {@link #getSecretAccessKey()} must be defined in order to override
      * default configuration from files/environment/machine profile</p>
@@ -103,5 +108,15 @@ public final class AwsConfig implements WithConfig {
         cfgInt(cfg, "max-connections", this::setMaxConnections);
         cfgInt(cfg, "max-error-retry", this::setMaxErrorRetry);
         cfgBoolean(cfg, "s3-path-style-access", this::setS3PathStyleAccess);
+    }
+
+    /**
+     * AWS credential provider
+     */
+    public enum CredentialsProviderType {
+        undefined,
+        anonymous,
+        env,
+        sysprops,
     }
 }

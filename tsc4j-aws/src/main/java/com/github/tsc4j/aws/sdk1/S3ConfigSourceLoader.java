@@ -25,6 +25,7 @@ public final class S3ConfigSourceLoader extends AbstractTsc4jLoader<S3ConfigSour
     public S3ConfigSourceLoader() {
         super(S3ConfigSource.class, S3ConfigSource::builder,
             S3ConfigSource.TYPE,
-            "Loads HOCON files from AWS S3 buckets.", "s3");
+            "Loads HOCON files from AWS S3 buckets.",
+            S3ConfigSource.TYPE_ALIASES);
     }
 }

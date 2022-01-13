@@ -46,7 +46,7 @@ public final class AwsSsmCommand extends AwsCliCommand {
             throw new PicocliException("No AWS SSM paths were specified. Run with --help for instructions.");
         }
 
-        val ssm = new SsmFacade("ssm", getAwsConfig(), true, true);
+        val ssm = new SsmFacade(getAwsConfig(), true, true);
         val params = ssm.fetchByPath(paths);
         val config = ssm.toConfig(params);
         val renderedConfig = Tsc4j.render(config, renderPath, verbosityLevel() + 1).trim();

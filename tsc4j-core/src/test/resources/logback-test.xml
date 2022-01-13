@@ -51,6 +51,13 @@
   <logger name="s3mock-akka" level="OFF" />
   <logger name="s3mock-akka.akka" level="OFF" />
   <logger name="com.amazonaws.util.EC2MetadataUtils" level="ERROR" />
+  <!--logger name="com.github.tsc4j.aws.sdk2" level="TRACE" /-->
+  <!--logger name="com.github.tsc4j.aws" level="DEBUG" /-->
+
+  <!-- aws sdk 2.x stuff -->
+  <logger name="com.github.tsc4j.aws.sdk2.ParameterStoreConfigSource" level="TRACE" />
+  <logger name="com.github.tsc4j.aws.sdk2.SsmFacade" level="TRACE" />
+  <!--logger name="org.apache.http.wire" level="TRACE" /-->
   <!--logger name="com.github.tsc4j.aws" level="DEBUG" /-->
 
   <!-- gcp stuff -->

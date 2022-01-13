@@ -25,6 +25,7 @@ public final class EC2MetadataConfigSourceLoader extends AbstractTsc4jLoader<EC2
     public EC2MetadataConfigSourceLoader() {
         super(EC2MetadataConfigSource.class, EC2MetadataConfigSource::builder,
             EC2MetadataConfigSource.TYPE,
-            "AWS SDK 1.x EC2 metadata", "ec2.metadata", "ec2");
+            "AWS SDK 1.x EC2 metadata",
+            EC2MetadataConfigSource.TYPE_ALIASES);
     }
 }

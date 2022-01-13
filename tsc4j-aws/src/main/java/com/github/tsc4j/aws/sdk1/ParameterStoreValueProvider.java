@@ -21,6 +21,7 @@ import com.github.tsc4j.aws.common.AwsConfig;
 import com.github.tsc4j.aws.common.WithAwsConfig;
 import com.github.tsc4j.core.AbstractConfigValueProvider;
 import com.github.tsc4j.core.ValueProviderBuilder;
+import com.github.tsc4j.core.utils.CollectionUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
 import lombok.Data;
@@ -30,7 +31,6 @@ import lombok.NonNull;
 import lombok.experimental.Accessors;
 import lombok.val;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
  * Parameter Store</a> value provider implementation.
  */
 public final class ParameterStoreValueProvider extends AbstractConfigValueProvider {
-    private final SsmFacade ssm;
+    private final SsmFacade ssmFacade;
 
     /**
      * Creates new instance.
@@ -48,8 +48,8 @@ public final class ParameterStoreValueProvider extends AbstractConfigValueProvid
      * @param builder instance builder
      */
     protected ParameterStoreValueProvider(@NonNull Builder builder) {
-        super(builder.getName(), builder.isAllowMissing(), builder.isParallel());
-        this.ssm = new SsmFacade(this.toString(), builder.getAwsConfig(), builder.isDecrypt(), builder.isParallel());
+        super(builder.getName(), SsmFacade.TYPE, SsmFacade.TYPE_ALIASES, builder.isAllowMissing(), builder.isParallel());
+        this.ssmFacade = new SsmFacade(builder.getName(), builder.getAwsConfig(), builder.isDecrypt(), builder.isParallel());
     }
 
     /**
@@ -62,16 +62,30 @@ public final class ParameterStoreValueProvider extends AbstractConfigValueProvid
     }
 
     @Override
+    public String getType() {
+        return SsmFacade.TYPE;
+    }
+
+    @Override
     protected Map<String, ConfigValue> doGet(@NonNull List<String> names) {
-        val result = new LinkedHashMap<String, ConfigValue>();
-        ssm.fetch(names).forEach(parameter -> result.put(parameter.getName(), SsmFacade.toConfigValue(parameter)));
+        val ssmToNameMap = SsmFacade.ssmParamNameMap(names);
+        val result = CollectionUtils.<String, ConfigValue>newMap();
+
+        val ssmParams = ssmFacade.fetch(CollectionUtils.toList(ssmToNameMap.keySet()));
+        ssmParams.forEach(it -> {
+            val name = ssmToNameMap.get(it.getName());
+            if (name != null) {
+                result.put(name, SsmFacade.toConfigValue(it));
+            }
+        });
+
         return result;
     }
 
     @Override
     protected void doClose() {
         super.doClose();
-        ssm.close();
+        ssmFacade.close();
     }
 
     /**
@@ -80,14 +94,9 @@ public final class ParameterStoreValueProvider extends AbstractConfigValueProvid
      * @return list of all parameter names
      */
     public List<String> names() {
-        return ssm.list().stream()
+        return ssmFacade.list().stream()
             .map(ParameterMetadata::getName)
             .collect(Collectors.toList());
-    }
-
-    @Override
-    public String getType() {
-        return SsmFacade.TYPE;
     }
 
     /**

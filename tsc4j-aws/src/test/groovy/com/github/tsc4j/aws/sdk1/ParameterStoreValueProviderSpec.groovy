@@ -17,9 +17,10 @@
 
 package com.github.tsc4j.aws.sdk1
 
+import com.amazonaws.services.simplesystemsmanagement.model.ParameterType
+import com.github.tsc4j.core.impl.Stopwatch
 import com.typesafe.config.ConfigFactory
 import groovy.util.logging.Slf4j
-import spock.lang.Ignore
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Stepwise
@@ -27,46 +28,18 @@ import spock.lang.Stepwise
 @Slf4j
 @Stepwise
 class ParameterStoreValueProviderSpec extends Specification {
-    @Shared
-    def paramNames = []
+    static def parameters = [
+        "/sdk1/psvp/a/x"  : [ParameterType.String, "x"],
+        "/sdk1/psvp/a/y"  : [ParameterType.StringList, "a,b,c", ["a", "b", "c"]],
+        "/sdk1/psvp/a/z"  : [ParameterType.SecureString, "val_a.z"],
+        "/sdk1/psvp/b/c/d": [ParameterType.String, "42"]
+    ]
 
     @Shared
-    def provider = ParameterStoreValueProvider.builder()
-                                              .setRegion("us-west-2")
-                                              .build()
+    ParameterStoreValueProvider provider = null
 
-    @Ignore
-    def "should list all parameters"() {
-        when:
-        def names = provider.names()
-
-        def sb = new StringBuilder("received aws SSM parameter names:\n")
-        names.each { sb.append("  $it\n") }
-        log.info(sb.toString())
-
-        then:
-        names.size() > 30
-
-        when: "assign param names"
-        paramNames = names
-
-        then:
-        true
-    }
-
-    @Ignore
-    def "should work"() {
-        when:
-
-        def ts = System.currentTimeMillis()
-        def results = provider.get(paramNames)
-        def duration = System.currentTimeMillis() - ts
-
-        log.info("results: {} (duration: {} msec)", results.size(), duration)
-        results.each { k, v -> log.info("  $k : ${v.unwrapped()}") }
-
-        then:
-        true
+    def cleanupSpec() {
+        provider?.close()
     }
 
     def "withConfig() should configure parameters to expected values"() {
@@ -75,8 +48,8 @@ class ParameterStoreValueProviderSpec extends Specification {
             // common AWS configuration parameters
             "access-key-id"       : 'foo',
             "secret-access-key"   : 'bar',
-            "region"              : 'us-east-5',
-            "endpoint"            : "http://localhost:4567/",
+            "region"              : 'us-east-1',
+            "endpoint"            : "http://localhost:4566/",
             "gzip"                : false,
             "timeout"             : '67s',
             "max-connections"     : 13,
@@ -84,7 +57,7 @@ class ParameterStoreValueProviderSpec extends Specification {
             "s3-path-style-access": true,
 
             // value provider specific configuration parameters
-            "decrypt"             : false,
+            "decrypt"             : true,
         ]
         def config = ConfigFactory.parseMap(cfgMap)
 
@@ -122,6 +95,96 @@ class ParameterStoreValueProviderSpec extends Specification {
             getS3PathStyleAccess() == true
         }
 
-        builder.isDecrypt() == false
+        builder.isDecrypt() == true
+
+        when:
+        provider = builder.build()
+        log.info("created AWS SSM config value provider: {}", provider)
+
+        then:
+        provider != null
+        provider instanceof ParameterStoreValueProvider
+    }
+
+    def "cleanup SSM and install parameters"() {
+        when:
+        def ssm = provider.ssmFacade.ssm
+        AwsTestEnv.setupSSM(ssm, parameters)
+
+        then:
+        true
+    }
+
+    def "should list all parameters"() {
+        when:
+        def names = provider.names()
+
+        def sb = new StringBuilder("received aws SSM parameter names:\n")
+        names.each { sb.append("  $it\n") }
+        log.info(sb.toString())
+
+        then:
+        names.size() == parameters.size()
+        names.toSet() == parameters.keySet()
+    }
+
+    def "provider should fetch requested parameters"() {
+        given:
+        def paramNames = parameters.keySet()
+        def sw = new Stopwatch()
+
+        when: "fetch config values"
+        def configValues = provider.get(paramNames)
+        debugConfigValues(configValues, sw)
+
+        then:
+        configValues.size() == paramNames.size()
+        configValues.each {
+            def expectedType = parameters.get(it.getKey()).first()
+                                         .toString()
+                                         .toLowerCase()
+                                         .replace('secure', '')
+                                         .replace('stringlist', 'list')
+
+            def expectedValue = parameters.get(it.getKey()).last()
+
+            def value = it.value
+            assert value.unwrapped() == expectedValue
+            assert value.valueType().toString().toLowerCase() == expectedType.toLowerCase()
+        }
+    }
+
+    def "provider should fetch requested parameters that don't start with /"() {
+        given:
+        def paramNames = parameters.keySet().collect { it.replaceAll('^/+', '') }
+        def sw = new Stopwatch()
+
+        when: "fetch config values"
+        def configValues = provider.get(paramNames)
+        debugConfigValues(configValues, sw)
+
+        then:
+        configValues.size() == paramNames.size()
+        configValues.each {
+            def key = '/' + it.key
+            assert parameters.get(key) != null: "Non-existing test parameter: $key"
+
+            def expectedType = parameters.get(key).first()
+                                         .toString()
+                                         .toLowerCase()
+                                         .replace('secure', '')
+                                         .replace('stringlist', 'list')
+
+            def expectedValue = parameters.get(key).last()
+
+            def value = it.value
+            assert value.unwrapped() == expectedValue
+            assert value.valueType().toString().toLowerCase() == expectedType.toLowerCase()
+        }
+    }
+
+    def debugConfigValues(Map configValues, Stopwatch sw) {
+        log.info("fetched config values: {} (duration: {} msec)", configValues.size(), sw)
+        configValues.each { k, v -> log.info("  $k : ${v.unwrapped()}") }
     }
 }

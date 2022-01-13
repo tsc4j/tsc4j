@@ -25,25 +25,44 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * {@link ConfigValue} provider interface.
  */
 public interface ConfigValueProvider extends Closeable {
     /**
-     * Returns transformer type.
+     * Returns config value provider type.
      *
-     * @return transformer type.
+     * @return config value provider type.
+     * @see #getTypeAliases()
+     * @see #supportsConfigValueReferenceType(String)
      */
     String getType();
 
     /**
-     * Returns transformer name
+     * Returns config value provider type aliases.
      *
-     * @return transformer name
+     * @return set of type aliases
+     * @see #getTypeAliases()
+     * @see #supportsConfigValueReferenceType(String)
+     */
+    Set<String> getTypeAliases();
+
+    /**
+     * Tells whether this config value provider supports given config value reference type.
+     *
+     * @param type config reference type
+     * @return true/false
+     */
+    boolean supportsConfigValueReferenceType(@NonNull String type);
+
+    /**
+     * Returns config value provider name.
+     *
+     * @return provider name
      */
     String getName();
-
 
     /**
      * Tells whether missing values should be tolerated and therefore {@link #get(Collection)} will not throw.

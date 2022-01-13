@@ -17,8 +17,10 @@
 
 package com.github.tsc4j.aws.sdk1
 
+import com.github.tsc4j.core.Tsc4jImplUtils
 import com.github.tsc4j.core.Tsc4jLoader
 import com.github.tsc4j.core.impl.Tsc4jLoaderTestBaseSpec
+import com.typesafe.config.ConfigFactory
 
 class ParameterStoreValueProviderLoaderSpec extends Tsc4jLoaderTestBaseSpec {
     @Override
@@ -34,5 +36,28 @@ class ParameterStoreValueProviderLoaderSpec extends Tsc4jLoaderTestBaseSpec {
     @Override
     Class builderClass() {
         ParameterStoreValueProvider.Builder
+    }
+
+    def "value provider should be loaded by type name and aliases"() {
+        given:
+        def loader = loader()
+        def names = [loader.name()] + loader.aliases()
+
+        when:
+        def vpOpts = names.collect {
+            def config = ConfigFactory.parseMap([
+                impl: it
+            ])
+            log.info("creating value provider impl: $it")
+            Tsc4jImplUtils.createValueProvider(config, 1)
+        }
+
+        then:
+        vpOpts.size() == names.size()
+        vpOpts.each { assert it.isPresent() }
+        vpOpts.each { assert it.get() instanceof ParameterStoreValueProvider }
+
+        cleanup:
+        vpOpts?.collect { it.ifPresent({ it.close() }) }
     }
 }

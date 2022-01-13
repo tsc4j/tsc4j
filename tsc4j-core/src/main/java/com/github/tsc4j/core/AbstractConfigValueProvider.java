@@ -16,6 +16,7 @@
 
 package com.github.tsc4j.core;
 
+import com.github.tsc4j.core.utils.CollectionUtils;
 import com.typesafe.config.ConfigValue;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -26,6 +27,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Base class for writing {@link ConfigValueProvider} implementations.
@@ -40,22 +42,51 @@ public abstract class AbstractConfigValueProvider extends BaseInstance implement
     private final boolean allowMissing;
 
     /**
+     * Instance type.
+     *
+     * @see #getTypeAliases()
+     */
+    @Getter
+    private final String type;
+
+    /**
+     * Instance type aliases.
+     *
+     * @see #getType()
+     */
+    @Getter
+    private final Set<String> typeAliases;
+
+    /**
      * Creates instance.
      *
      * @param name         instance name
+     * @param type         instance type
+     * @param typeAliases  instance type aliases
      * @param allowMissing whether missing names should be tolerated
      * @param parallel     execute operations in parallel?
      * @see #isParallel()
      * @see #allowMissing()
      */
-    protected AbstractConfigValueProvider(String name, boolean allowMissing, boolean parallel) {
+    protected AbstractConfigValueProvider(String name,
+                                          @NonNull String type,
+                                          @NonNull Collection<String> typeAliases,
+                                          boolean allowMissing,
+                                          boolean parallel) {
         super(name);
+        this.type = type;
+        this.typeAliases = CollectionUtils.toImmutableSet(typeAliases);
         this.allowMissing = allowMissing;
         this.parallel = parallel;
     }
 
     @Override
-    public boolean allowMissing() {
+    public final boolean supportsConfigValueReferenceType(@NonNull String type) {
+        return getType().equals(type) || getTypeAliases().contains(type);
+    }
+
+    @Override
+    public final boolean allowMissing() {
         return allowMissing;
     }
 

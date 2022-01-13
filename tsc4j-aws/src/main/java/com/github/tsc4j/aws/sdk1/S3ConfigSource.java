@@ -29,6 +29,7 @@ import com.github.tsc4j.core.Tsc4jCache;
 import com.github.tsc4j.core.Tsc4jException;
 import com.github.tsc4j.core.Tsc4jImplUtils;
 import com.github.tsc4j.core.WithCache;
+import com.github.tsc4j.core.utils.CollectionUtils;
 import com.typesafe.config.Config;
 import lombok.Getter;
 import lombok.NonNull;
@@ -42,6 +43,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -56,7 +58,9 @@ public final class S3ConfigSource
     implements WithCache<String, Config> {
     private static final String S3_URL_PREFIX = "s3://";
     private static final Pattern S3_URL_PATTERN = Pattern.compile("^" + S3_URL_PREFIX + "([\\w\\-\\.]+)/(.*)");
+
     static final String TYPE = "aws.s3";
+    static final Set<String> TYPE_ALIASES = CollectionUtils.toImmutableSet("aws1.s3", "s3");
 
     /**
      * S3 client in use

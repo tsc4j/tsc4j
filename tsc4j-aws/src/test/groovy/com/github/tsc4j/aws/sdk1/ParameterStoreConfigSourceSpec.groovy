@@ -27,14 +27,12 @@ import com.github.tsc4j.testsupport.TestConstants
 import com.typesafe.config.ConfigFactory
 import groovy.util.logging.Slf4j
 import spock.lang.AutoCleanup
-import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
 
 @Slf4j
 @Unroll
-@IgnoreIf({ env['CI'] })
 class ParameterStoreConfigSourceSpec extends Specification {
     static def parameters = [
         "/a/x"  : [ParameterType.String, "x"],
@@ -144,7 +142,7 @@ class ParameterStoreConfigSourceSpec extends Specification {
             "access-key-id"       : 'foo',
             "secret-access-key"   : 'bar',
             "region"              : 'us-east-5',
-            "endpoint"            : "http://localhost:4567/",
+            "endpoint"            : "http://localhost:4566/",
             "gzip"                : false,
             "timeout"             : '67s',
             "max-connections"     : 13,
