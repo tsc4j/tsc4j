@@ -16,7 +16,7 @@ dependencies {
 
 compileJava {
   // for picocli-codegen
-  options.compilerArgs += ["-Aproject=${project.group}/${project.name}"]
+  options.compilerArgs += ["-Aproject=${project.group}/${project.name}-picocli"]
 }
 
 description = "Command line support"

@@ -7,7 +7,7 @@
 <!-- For professional support please see                            -->
 <!--    http://www.qos.ch/shop/products/professionalSupport         -->
 <!--                                                                -->
-<configuration scan="true" scanPeriod="1 seconds">
+<configuration scan="false">
   <!-- See:                                                                  -->
   <!--    http://logback.qos.ch/manual/appenders.html#ConsoleAppender        -->
   <!--    http://logback.qos.ch/manual/appenders.html#RollingFileAppender    -->
