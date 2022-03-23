@@ -1,0 +1,5 @@
+
+props.yml.foo: foo-yaml
+props.common:
+  a: common-a-yaml
+  b: common-b-yaml

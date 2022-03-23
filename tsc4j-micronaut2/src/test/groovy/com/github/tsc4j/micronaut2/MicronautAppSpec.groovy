@@ -22,6 +22,7 @@ import com.github.tsc4j.core.Tsc4j
 import com.typesafe.config.Config
 import groovy.util.logging.Slf4j
 import io.micronaut.context.ApplicationContext
+import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Value
 import io.micronaut.test.extensions.spock.annotation.MicronautTest
 import spock.lang.Specification
@@ -172,5 +173,30 @@ class MicronautAppSpec extends Specification {
 
         ctx.get('x.y.foo', String).get() == 'bar'
         ctx.get('x.y.bar', String).get() == 'baz'
+    }
+
+    def "application context should seamlessly integrate tsc4j and yaml properties"() {
+        expect:
+        getAppProperty('props.yml.foo') == 'foo-yaml'
+        getAppProperty('props.common.a') == 'common-a-yaml'
+
+        // tsc4j provided props
+        getAppProperty('props.common.b') == 'common-b-hocon' // tsc4j props should have preference
+        getAppProperty('props.hocon.foo') == 'foo-hocon'
+    }
+
+    @Property(name = 'props.yml.foo', value = 'test-yaml')
+    @Property(name = 'props.hocon.foo', value = 'test-hocon')
+    def "property overrides in tests should work"() {
+        expect:
+        getAppProperty('props.yml.foo') == 'test-yaml'
+        getAppProperty('props.hocon.foo') == 'test-hocon'
+
+        getAppProperty('props.common.a') == 'common-a-yaml'
+        getAppProperty('props.common.b') == 'common-b-hocon' // tsc4j props should have preference
+    }
+
+    def getAppProperty(String name, Class<?> clazz = String) {
+        appCtx.getEnvironment().getProperty(name, clazz).get()
     }
 }
