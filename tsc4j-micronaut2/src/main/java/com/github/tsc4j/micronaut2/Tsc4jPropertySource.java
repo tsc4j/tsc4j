@@ -25,6 +25,7 @@ import com.github.tsc4j.core.Tsc4j;
 import com.github.tsc4j.core.Tsc4jImplUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import io.micronaut.context.env.EnvironmentPropertySource;
 import io.micronaut.context.env.PropertySource;
 import lombok.NonNull;
 import lombok.Synchronized;
@@ -107,7 +108,7 @@ public final class Tsc4jPropertySource extends CloseableInstance implements Prop
 
     @Override
     public int getOrder() {
-        return Tsc4jPropertySourceLoader.ORDER_POSITION;
+        return EnvironmentPropertySource.POSITION + 10;
     }
 
     @Override

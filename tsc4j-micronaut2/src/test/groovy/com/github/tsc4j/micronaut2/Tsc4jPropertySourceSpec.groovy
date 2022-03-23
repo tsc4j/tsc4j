@@ -154,7 +154,7 @@ class Tsc4jPropertySourceSpec extends Specification {
 
         expect:
         src.getConvention() == PropertySource.PropertyConvention.JAVA_PROPERTIES
-        src.getOrder() == 9900
+        src.getOrder() == -190
         src.getName() == Tsc4jImplUtils.NAME
 
         // check that all expected propnames are there
