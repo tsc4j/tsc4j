@@ -28,6 +28,7 @@ dependencies {
 
   // AWS platform support
   implementation          project(":${rootProject.name}-aws2")
+  implementation          "software.amazon.awssdk:sts"
 
   // credstash support
   //implementation          project(":${rootProject.name}-credstash")
