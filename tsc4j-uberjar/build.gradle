@@ -12,6 +12,10 @@ publishing.publications.mavenJava.pom.description = rootProject.name + ' :: ' + 
 
 configurations {
   all*.exclude group: "commons-logging", module: "commons-logging"
+
+  // aws sdk 2.x
+  all*.exclude group: "io.netty"
+  all*.exclude group: "software.amazon.awssdk", module: "netty-nio-client"
 }
 
 dependencies {
