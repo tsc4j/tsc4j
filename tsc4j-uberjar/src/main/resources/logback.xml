@@ -32,7 +32,11 @@
   <logger name="org.apache.http" level="WARN" />
 
   <!--logger name="com.amazonaws" level="INFO" /-->
+
+  <!-- silence aws sdk annoying messages -->
   <logger name="com.amazonaws.jmx" level="OFF" />
+  <logger name="com.amazonaws.auth.profile.internal" level="OFF"/>
+  <logger name="software.amazon.awssdk.profiles.internal" level="OFF"/>
 
   <!--logger name="org.apache" level="TRACE" additivity="false">
     <appender-ref ref="wireDebug"/>
