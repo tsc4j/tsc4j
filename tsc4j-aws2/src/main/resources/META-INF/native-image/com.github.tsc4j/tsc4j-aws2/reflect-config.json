@@ -1,0 +1,10 @@
+[
+  {
+    "name" : "software.amazon.awssdk.services.sts.internal.StsProfileCredentialsProviderFactory",
+    "allPublicConstructors" : true
+  },
+  {
+    "name" : "software.amazon.awssdk.services.sts.internal.StsWebIdentityCredentialsProviderFactory",
+    "allPublicConstructors" : true
+  }
+]
