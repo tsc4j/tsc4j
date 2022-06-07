@@ -10,6 +10,14 @@ plugins {
 description = "Command line uberjar"
 publishing.publications.mavenJava.pom.description = rootProject.name + ' :: ' + description
 
+configurations {
+  all*.exclude group: "commons-logging", module: "commons-logging"
+
+  // aws sdk 2.x
+  all*.exclude group: "io.netty"
+  all*.exclude group: "software.amazon.awssdk", module: "netty-nio-client"
+}
+
 dependencies {
   // required tsc4j dependencies
   implementation          project(":${rootProject.name}-cli")
@@ -19,10 +27,11 @@ dependencies {
   //        choose only the ones that you actually need
 
   // AWS platform support
-  implementation          project(":${rootProject.name}-aws")
+  implementation          project(":${rootProject.name}-aws2")
+  implementation          "software.amazon.awssdk:sts"
 
   // credstash support
-  implementation          project(":${rootProject.name}-credstash")
+  //implementation          project(":${rootProject.name}-credstash")
 
   // GCP platform support
   //implementation        project(":${rootProject.name}-gcp")
@@ -37,8 +46,8 @@ dependencies {
   implementation          "jakarta.xml.bind:jakarta.xml.bind-api"
 
   // logging
-  // use logback 1.1.11, which doesn't spawn threads by default
-  implementation          "ch.qos.logback:logback-classic:1.1.11"
+  implementation          "org.slf4j:jcl-over-slf4j"
+  implementation          "ch.qos.logback:logback-classic:1.2.10"
 }
 
 compileJava {
