@@ -11,8 +11,8 @@ jacoco {
 jacocoTestReport {
   dependsOn test
   reports {
-    csv.enabled false
-    html.destination file("${buildDir}/reports/jacoco")
+    csv.required      = false
+    html.destination  file("${buildDir}/reports/jacoco")
   }
 }
 

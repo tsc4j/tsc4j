@@ -14,7 +14,7 @@ dependencies {
 
   testImplementation      "org.slf4j:jcl-over-slf4j"
   testImplementation      "ch.qos.logback:logback-classic"
-  testImplementation      "com.github.tomakehurst:wiremock:2.18.0"
+  testImplementation      "com.github.tomakehurst:wiremock"
 }
 
 configurations {
@@ -36,9 +36,9 @@ artifacts {
 }
 
 gitProperties {
-  dateFormat          = "yyyy-MM-dd' 'HH:mm:ssZ"
+  dateFormat          = "yyyy-MM-dd'T'HH:mm:ss'Z'"
   dateFormatTimeZone  = "UTC"
-  gitPropertiesDir    = "${project.buildDir}/resources/main/com/github/tsc4j/core"
+  gitPropertiesResourceDir  = file("${project.buildDir}/resources/main/com/github/tsc4j/core")
 
   keys                = [ 'git.build.version', 'git.commit.id', 'git.commit.id.abbrev','git.commit.time' ]
 }
