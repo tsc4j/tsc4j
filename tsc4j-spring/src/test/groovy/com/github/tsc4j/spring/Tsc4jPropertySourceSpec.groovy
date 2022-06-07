@@ -17,7 +17,6 @@
 package com.github.tsc4j.spring
 
 import com.github.tsc4j.api.ReloadableConfig
-import com.github.tsc4j.spring.Tsc4jPropertySource
 import com.github.tsc4j.test.TestReloadable
 import com.typesafe.config.ConfigFactory
 import spock.lang.Specification
@@ -278,5 +277,18 @@ class Tsc4jPropertySourceSpec extends Specification {
         ' @appId '                     | null           | false
         '💩foo'                        | null           | false
         ' |💩foo 🤷|¯|_(ツ)_/¯'         | null           | false
+    }
+
+    def "assignPropertyMap() should not throw NPE if map contains null values"() {
+        given:
+        def map = ['foo': 'bar', 'bar': null]
+        def source = newSource()
+
+        when:
+        source.assignPropertyMap(map)
+
+        then:
+        noExceptionThrown()
+        source.springPropertyMap == map
     }
 }

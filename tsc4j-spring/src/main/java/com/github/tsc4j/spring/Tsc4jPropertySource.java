@@ -166,6 +166,7 @@ final class Tsc4jPropertySource extends EnumerablePropertySource<ReloadableConfi
 
         if (log.isDebugEnabled()) {
             val str = springPropertyMap.entrySet().stream()
+                .filter(it -> it.getValue() != null)
                 .map(it -> "  " + it.getKey() + " => " + it.getValue().getClass().getName() + " `" + it.getValue() + "`")
                 .collect(Collectors.joining("\n"));
             log.trace("updated current config properties:\n{}", str);
