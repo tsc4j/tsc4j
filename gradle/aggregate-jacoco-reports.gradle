@@ -33,12 +33,12 @@ task codeCoverageReport(type: JacocoReport) {
   // enable the different report types (html, xml, csv)
   reports {
     xml {
-      enabled     true
+      required    = true
       destination file("${rootProject.buildDir}/jacoco/aggregated-code-coverage.xml")
     }
 
     html {
-      enabled     true
+      required    = true
       destination file("${rootProject.buildDir}/reports/jacoco")
     }
   }

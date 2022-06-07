@@ -47,7 +47,7 @@ dependencies {
 
   // logging
   implementation          "org.slf4j:jcl-over-slf4j"
-  implementation          "ch.qos.logback:logback-classic:1.2.10"
+  implementation          "ch.qos.logback:logback-classic"
 }
 
 compileJava {

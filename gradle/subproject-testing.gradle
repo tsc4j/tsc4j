@@ -8,11 +8,11 @@
 apply plugin: "com.adarshr.test-logger"
 
 test {
-  failFast = true
+  failFast        = true
 
   reports {
     html {
-      enabled = true
+      required    = true
       destination = file("${rootDir}/build/reports/test/${project.name}")
     }
 
