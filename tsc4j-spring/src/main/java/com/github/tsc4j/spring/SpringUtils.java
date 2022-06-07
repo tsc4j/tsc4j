@@ -193,7 +193,12 @@ class SpringUtils {
 
         // construct value map
         val map = new LinkedHashMap<String, Object>();
-        propNames.forEach(key -> map.put(key, springPropertyValue(key, config)));
+        propNames.forEach(key -> {
+            val value = springPropertyValue(key, config);
+            if (value != null) {
+                map.put(key, value);
+            }
+        });
 
         return Collections.unmodifiableMap(map);
     }
