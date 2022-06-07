@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 ############################################################
 # runtime env vars
@@ -9,22 +9,39 @@ USE_LLVM=${USE_LLVM:-0}
 
 SYSTEM=$(uname -s | tr '[A-Z]' '[a-z]')
 ARCH=$(uname -m)
-BIN_OUT="$(pwd)/build/tsc4j-${SYSTEM}-${ARCH}"
+BUILD_DIR="$(pwd)/build"
+BIN_OUT="${BUILD_DIR}/tsc4j-${SYSTEM}-${ARCH}"
 DEFAULT_JAR_FILE="$(pwd)/tsc4j-uberjar/build/libs/tsc4j.jar"
+
+############################################################
+#                         FUNCTIONS                        #
+############################################################
 
 die() {
   echo "FATAL: $@" 1>&2
   exit 1
 }
 
-post_process() {
-  local file="$1"
-  test -x "$file" || die "Can't post-process non-executable: $file"
-  local dst="${file}.upx"
+has_upx() {
+  which upx >/dev/null 2>&1
+}
 
-  echo "posprocessing binary with upx: $file"
+post_process_upx() {
+  has_upx || return 0
+  test -f "$1" || die "Invalid binary to pre-process with upx: $1"
+
+  local dst="$1.upx"
   rm -f "$dst"
-  upx -o "$dst" "$file"
+
+  echo "posprocessing binary with upx: $1"
+  upx -q -o "$dst" "$1" || die "Can't upx post-process file: $1"
+}
+
+post_process() {
+  local f=""
+  for f in "$@"; do
+    post_process_upx "$f"
+  done
 }
 
 native_img_compile() {
@@ -32,9 +49,7 @@ native_img_compile() {
   test -f "$jar" || jar="$DEFAULT_JAR_FILE"
   test -f "$jar" || die "Bad uber-jar to compile to native image: '$jar'"
 
-  local build_dir=$(dirname "$BIN_OUT")
-  mkdir -p "$build_dir" || die "can't create build_dir: $build_dir"
-  cd "$build_dir" || die "can't enter build dir: $build_dir"
+  cd "${BUILD_DIR}" || die "can't enter build dir: ${BUILD_DIR}"
 
   local opt=""
   test "$VEBOSE" = "1" && opt="${opt} --verbose"
@@ -60,29 +75,76 @@ native_img_compile() {
   mv tsc4j "$BIN_OUT" || die "unable to move tsc4j binary to: $BIN_OUT"
 }
 
+action_native_image() {
+  native_img_compile
+}
+
+action_post_process() {
+  post_process_upx "${BIN_OUT}"
+}
+
+action_all() {
+  action_native_image
+  action_post_process
+
+  echo ""
+  echo "produced binaries have been placed to: ${BUILD_DIR}"
+  echo ""
+  file "${BIN_OUT}"*
+  echo ""
+  du -hc "${BIN_OUT}"*
+}
+
 script_init() {
   test -z "$GRAALVM_HOME" && die "Undefined env var \$GRAALVM_HOME, please install graalvm from https://github.com/graalvm/graalvm-ce-builds/releases"
   test ! -d "$GRAALVM_HOME" && die "Bad graalvm directory: $GRAALVM_HOME"
   test ! -x "$GRAALVM_HOME/bin/native-image" && die "GraalVM installation $GRAALVM_HOME doesn't contain native-image binary, install it with: 'gu install native-image'"
 
-  # check for required tools
-  local bin=""
-
-  # look for required binaries
-  local bin_name=""
-  for bin_name in upx; do
-    bin=$(which "$bin_name" 2>/dev/null)
-    test -x "$bin" || die "Can't find binary on the system: $bin_name"
-  done
+  mkdir -p "${BUILD_DIR}" || die "Can't create build dir: $BUILD_DIR"
 }
 
 do_run() {
-  script_init
-  native_img_compile "$@" || die "native-image build failed."
-  post_process "$BIN_OUT"
+  local action="$1"
+  shift
+  test -z "$action" && action="all"
 
-  echo ""
-  echo "produced binaries have been placed to: $(dirname "${BIN_OUT}")"
+  script_init
+
+  # compute function to run
+  local func_to_run="action_${action}"
+  local type=$(type -t $func_to_run)
+  test "$type" = "function" || die "Invalid action: $action. Run $0 --help for instructions."
+
+  # run the function
+  "$func_to_run" "$@" || die "Error running action: $action"
+}
+
+printhelp() {
+  cat <<EOF
+Usage: $0 [OPTIONS] [action] [args]
+
+OPTIONS:
+  -h    --help          This help message
+
+ENV VARS:
+* VERBOSE    (default: $VERBOSE)   :: verbose native-image compilation
+* USE_STATIC (default: $USE_STATIC)   :: compile static binaries
+* USE_LLVM   (default: $USE_LLVM)   :: use native-image llvm toolchain
+
+ACTIONS:
+* native_image          :: compile uber-jar into native image binary
+* post_process          :: optionally post-process produced binaries
+* all                   :: do all actions in a single step
+EOF
+}
+
+############################################################
+#                           MAIN                           #
+############################################################
+
+test "$1" = "-h" -o "$1" = "--help" && {
+  printhelp
+  exit 0
 }
 
 do_run "$@"
