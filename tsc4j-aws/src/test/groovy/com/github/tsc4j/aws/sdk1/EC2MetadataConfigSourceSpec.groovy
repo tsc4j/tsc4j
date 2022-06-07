@@ -58,7 +58,7 @@ class EC2MetadataConfigSourceSpec extends Specification {
         ]
     }
 
-    @Timeout(1)
+    @Timeout(3)
     @RestoreSystemProperties
     def "should return expected values with installed at: '#atPath'"() {
         given:
