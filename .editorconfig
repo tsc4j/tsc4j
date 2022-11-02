@@ -14,7 +14,7 @@ indent_size = 4
 ij_java_doc_enable_formatting = true
 ij_any_if_brace_force = always
 
-[*.{conf,xml,yml,json,properties,gradle}]
+[*.{conf,xml,yml,json,properties,gradle,sh}]
 indent_size = 2
 
 # vim:shiftwidth=2 softtabstop=2 expandtab

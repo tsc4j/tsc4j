@@ -5,6 +5,8 @@
 plugins {
   id "application"
   id "com.github.johnrengelman.shadow"
+  id "com.google.osdetector"
+  id "org.graalvm.buildtools.native"
 }
 
 description = "Command line uberjar"
@@ -85,6 +87,30 @@ def shadowJarEnabled = gradle.startParameter.taskRequests
   .find {it.args.find {it.contains("shadowJar")} != null  } != null
 if (!shadowJarEnabled) {
   gradle.startParameter.excludedTaskNames += "shadowJar"
+}
+
+// GraalVM native-image
+tasks.named("nativeCompile") {
+  classpathJar = file("build/libs/tsc4j.jar")
+  dependsOn shadowJar
+}
+graalvmNative {
+  binaries {
+    main {
+      imageName     = "tsc4j-${osdetector.classifier}"
+
+      verbose         = true
+      fallback        = false
+      richOutput      = true
+      sharedLibrary   = false
+      useFatJar       = true
+      requiredVersion = '22.3'
+    }
+  }
+
+  metadataRepository {
+    enabled = true
+  }
 }
 
 // vim:shiftwidth=2 softtabstop=2 expandtab

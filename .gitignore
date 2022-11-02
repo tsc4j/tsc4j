@@ -72,5 +72,7 @@ hs_err_pid*
 #### BEGIN  python
 #### END    python
 
+.musl/
+
 # vim:shiftwidth=2 softtabstop=2 expandtab
 # EOF
